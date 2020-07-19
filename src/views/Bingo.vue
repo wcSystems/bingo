@@ -3,16 +3,16 @@
     <Tablero />
     <Carton />
     <div class="float-left btn-group" role="group" aria-label="Basic example">
-      <button @click="control('play')" type="button" class="btn background3490dcREC">
+      <button :disabled="controlStateBtn.play" @click="control('play')" type="button" class="btn background3490dcREC">
         <font-awesome-icon :icon="['fa', 'play']"  />
       </button>
-      <button @click="control('pause')" type="button" class="btn background3490dcREC">
+      <button :disabled="controlStateBtn.pause" @click="control('pause')" type="button" class="btn background3490dcREC">
         <font-awesome-icon :icon="['fa', 'pause']"  />
       </button>
-      <button @click="control('stop')" type="button" class="btn background3490dcREC">
+      <button :disabled="controlStateBtn.stop" @click="control('stop')" type="button" class="btn background3490dcREC">
         <font-awesome-icon :icon="['fa', 'stop']" />
       </button>
-      <button @click="control('undo')" type="button" class="btn background3490dcREC">
+      <button :disabled="controlStateBtn.undo" @click="control('undo')" type="button" class="btn background3490dcREC">
         <font-awesome-icon :icon="['fa', 'undo']" />
       </button>
     </div>
@@ -52,10 +52,16 @@
     data() {
       return { 
         obj: { arr:[], arrNew:[], letra: '-', numero: '0' },
-        controlEvent: 0
+        controlEvent: 0,
+        controlStateBtn: { play: false, pause: true, stop: true, undo: true }
       }
     },
     async created() { 
+      const getlocalStorageArrNew = JSON.parse(localStorage.getItem('arrNew'))
+      if(getlocalStorageArrNew != null){
+        this.setBingo(getlocalStorageArrNew)
+      }
+      localStorage.setItem('localStorageTablero',JSON.stringify(this.getTablero))       
       this.filtro()
     },
     computed: mapGetters(["getBingo","getTablero","getArtyom"]),
@@ -77,27 +83,37 @@
         return (this.obj.arr.find(item => item === res)) ? true : false;
       },
       async control(option) {
+        let msgPlay = {}
+        if(JSON.parse(localStorage.getItem('arrNew')) != null){
+          msgPlay = { title:'Play', msg:'El juego se reanudara en 8 segundos.' }
+          }else{
+            msgPlay = { title:'Play', msg:'El juego empezara en 8 segundos.' }
+        }
         switch (option) {
           case 'play':
-            this.alertControl({title:'Play',msg:'El juego empezara en 8 segundos.'})
+            this.alertControl(msgPlay)
+            this.controlStateBtn = { play: true, pause: false, stop: false, undo: false }
             this.controlEvent = setInterval( () => this.sorteo() , 8000)
             break;
           case 'pause':
             this.alertControl({title:'Pausa',msg:'Click! en Play para reaunudar.'})
+            this.controlStateBtn = { play: false, pause: true, stop: false, undo: false }
             clearInterval(this.controlEvent)
             break;
           case 'stop':
             this.alertControl({title:'Stop',msg:'Todos los registros se han perdido.'})
+            this.controlStateBtn = { play: false, pause: true, stop: true, undo: true }
             clearInterval(this.controlEvent)
+            localStorage.removeItem('arrNew')
             this.obj = { arr:[], arrNew:[], letra: '-', numero: '0' }
-            this.setBingo([])
+            this.setBingo(JSON.parse(localStorage.getItem('localStorageTablero')))
             break;
           case 'undo':
             this.alertControl({title:'Reiniciar',msg:'Empecemos desde cero.'})
+            this.controlStateBtn = { play: true, pause: false, stop: false, undo: false }
             clearInterval(this.controlEvent)
             this.obj = { arr:[], arrNew:[], letra: '-', numero: '0' }
-            this.setBingo([])
-            await this.setBingo(this.getTablero)
+            this.setBingo(JSON.parse(localStorage.getItem('localStorageTablero')))
             this.controlEvent = setInterval( () => this.sorteo() , 8000)
             break;
           default:
@@ -128,7 +144,11 @@
             this.obj.arr.splice(index2,1)
           }
           this.obj.arrNew.push(res)
+
+          localStorage.setItem('arrNew',JSON.stringify(this.getBingo))          
           this.setBingo(this.obj.arrNew)
+          
+
         })
       },
     },
